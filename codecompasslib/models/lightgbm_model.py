@@ -1,5 +1,7 @@
 import os
 import sys
+import streamlit as st
+import pandas as pd
 
 # go up to root
 # Construct the path to the root directory (one level up from embeddings)
@@ -10,6 +12,8 @@ real_project_dir = os.path.dirname(project_dir)
 sys.path.insert(0, real_project_dir)
 
 import pandas as pd
+import json
+import redis
 from typing import Tuple, List
 from pandas import DataFrame, concat
 from numpy import ndarray, argsort
@@ -19,7 +23,26 @@ from category_encoders import ordinal
 
 from codecompasslib.API.drive_operations import download_csv_as_pd_dataframe, get_creds_drive
 from codecompasslib.API.get_bulk_data import get_stared_repos, get_user_repos
+from codecompasslib.embeddings.generate_embedded_dataset import redis_to_dataframe
 
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+def load_non_embedded_data(fname: str) -> DataFrame:
+    """
+    Load non-embedded data from a local CSV file.
+    :param file_path: Path to the non-embedded CSV file.
+    :return: DataFrame containing non-embedded data.
+    """
+        # Construct the path to the root directory (one level up from embeddings)
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(root_dir)
+    real_project_dir = os.path.dirname(project_dir)
+    # Add the project directory to the Python path
+    sys.path.insert(0, real_project_dir)
+    
+    df_non_embedded = pd.read_csv(real_project_dir + '/data/' + fname)
+    return df_non_embedded
 
 def encode_csv(df: DataFrame, encoder, label_col: str, typ: str = "fit") -> Tuple[DataFrame, ndarray]:
     """
@@ -37,6 +60,37 @@ def encode_csv(df: DataFrame, encoder, label_col: str, typ: str = "fit") -> Tupl
     y: ndarray = df[label_col].values
     del df[label_col]
     return df, y
+
+def preprocess_data(df_embedded: DataFrame, df_non_embedded: DataFrame,
+                    label_col: str, target_user: str) -> DataFrame:
+    """
+    Preprocesses the data by merging embedded and non-embedded datasets,
+    converting the 'stars' column to integer, adding a target column,
+    and dropping unnecessary columns.
+
+    Args:
+        df_embedded (DataFrame): The embedded dataset.
+        df_non_embedded (DataFrame): The non-embedded dataset.
+        label_col (str): The name of the target label column.
+        target_user (str): The username of the target user.
+
+    Returns:
+        DataFrame: The preprocessed dataset.
+        List: List of repo IDs that are either starred or owned by the target user.
+    """
+    # Merge the embedded and non-embedded datasets (match based on ID), grab the column you need for training 
+    df_merged: DataFrame = pd.merge(df_embedded, df_non_embedded[['id', 'stars', 'language', 'owner_user']], on='id', how='left')
+
+    # Turn stars column into integer column
+    df_merged['stars'] = df_merged['stars'].astype(int)
+
+    # Add target column: 1 if the repo is starred or owned by the user, else 0
+    owned_by_target_repo_ids: List = [item['id'] for item in get_user_repos(target_user)[0]]
+    starred_repo_ids: List = [item['id'] for item in get_stared_repos(target_user)[0]]
+    starred_or_owned_by_user:List = starred_repo_ids + owned_by_target_repo_ids
+    df_merged[label_col] = df_merged['id'].apply(lambda x: 1 if x in starred_or_owned_by_user else 0)
+
+    return df_merged, starred_or_owned_by_user
 
 
 def train_lightGBM_model(df_merged: DataFrame, label_col: str) -> Tuple[lgb.Booster, ordinal.OrdinalEncoder]:
@@ -122,77 +176,26 @@ def train_lightGBM_model(df_merged: DataFrame, label_col: str) -> Tuple[lgb.Boos
     return lgb_model, ord_encoder
 
 
-def load_data(full_data_folder_id: str, full_data_embedded_folder_id: str) -> Tuple[DataFrame, DataFrame]:
-    """
-    Load the data from the Google Drive
-    :return: The non-embedded and embedded datasets
-    """
-
-    creds = get_creds_drive()
-    df_non_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_folder_id)
-    df_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_embedded_folder_id)
-
-    # Having data locally works much faster than retrieving from drive. Uncomment the following lines to use local data
-    # df_non_embedded = pd.read_csv('codecompasslib/models/data_full.csv')
-    # df_embedded = pd.read_csv('codecompasslib/models/df_embedded_combined.csv')
-
-    print("Data loaded")
-    return df_non_embedded, df_embedded
-
-
-def preprocess_data(df_embedded: DataFrame, df_non_embedded: DataFrame,
-                    label_col: str, target_user: str) -> DataFrame:
-    """
-    Preprocesses the data by merging embedded and non-embedded datasets,
-    converting the 'stars' column to integer, adding a target column,
-    and dropping unnecessary columns.
-
-    Args:
-        df_embedded (DataFrame): The embedded dataset.
-        df_non_embedded (DataFrame): The non-embedded dataset.
-        label_col (str): The name of the target label column.
-        target_user (str): The username of the target user.
-
-    Returns:
-        DataFrame: The preprocessed dataset.
-        List: List of repo IDs that are either starred or owned by the target user.
-    """
-    # Merge the embedded and non-embedded datasets (match based on ID), grab the column you need for training 
-    df_merged: DataFrame = pd.merge(df_embedded, df_non_embedded[['id', 'stars', 'language']], on='id', how='left')
-
-    # Turn stars column into integer column
-    df_merged['stars'] = df_merged['stars'].astype(int)
-
-    # Add target column: 1 if the repo is starred or owned by the user, else 0
-    owned_by_target_repo_ids: List = [item['id'] for item in get_user_repos(target_user)[0]]
-    starred_repo_ids: List = [item['id'] for item in get_stared_repos(target_user)[0]]
-    starred_or_owned_by_user:List = starred_repo_ids + owned_by_target_repo_ids
-    df_merged[label_col] = df_merged['id'].apply(lambda x: 1 if x in starred_or_owned_by_user else 0)
-
-    return df_merged, starred_or_owned_by_user
-
-
 def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFrame,
                                       df_embedded: DataFrame, number_of_recommendations: int = 10) -> list:
     """
     Generates recommendations using the LightGBM model.
-
-    Args:
-        target_user (str): The target user for whom recommendations are generated.
-        df_non_embedded (DataFrame): The non-embedded data frame containing the features.
-        df_embedded (DataFrame): The embedded data frame containing the features.
-        label_col (str): The name of the label column.
-        number_of_recommendations (int, optional): The number of recommendations to generate. Defaults to 10.
-
-    Returns:
-        list: A list of recommendations, each containing the repository name, owner user, and prediction score.
     """
+    # Load both DataFrames from Redis and local CSV
+    df_embedded = redis_to_dataframe()
+    df_non_embedded = load_non_embedded_data('data_full.csv') 
+
     # Preprocess data
     label_col: str = 'target'
     df_merged, starred_or_owned_by_user = preprocess_data(df_embedded, df_non_embedded, label_col, target_user)
-
+    
+    #print columns of df_merged
+    print("\ndf_merged columns:", df_merged.columns)
+    #print head of df_merged
+    print("\ndf_merged head:", df_merged.head())
+    
     df_training_ready: DataFrame = df_merged.drop(columns=['id', 'owner_user'])
-
+    
     lgb_model: lgb.Booster
     ord_encoder: ordinal.OrdinalEncoder
     # Train LightGBM model
@@ -219,3 +222,32 @@ def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFra
             recommendations.append((df_merged.iloc[index]['id'], df_merged.iloc[index]['owner_user'], all_preds[index]))
 
     return recommendations
+
+if __name__ == "__main__":
+    #Want to check datatypes of columns for non embedded and embedded
+    non_embedded = load_non_embedded_data("data_full.csv")
+    embedded = redis_to_dataframe()
+    
+    print("\nNon-embedded dataset \n\nTypes: \n")
+    print(non_embedded.info())
+    print("\n\n Column names: \n")
+    print(non_embedded.columns)
+    
+    
+    print("\nEmbedded dataset \n\nTypes: \n")
+    print(embedded.info())
+    print("\n\n Column names: \n")
+    print(embedded.columns)
+    
+    recos = generate_lightGBM_recommendations("mercyog", non_embedded, embedded, 10)
+    
+    
+
+    
+
+    
+
+
+
+
+
