@@ -2,25 +2,25 @@ import numpy as np
 import pandas as pd
 from gensim.models.keyedvectors import KeyedVectors
 from sentence_transformers import SentenceTransformer
-from langchain_community.embeddings import OllamaEmbeddings
+#from langchain_community.embeddings import OllamaEmbeddings
 from gensim.models import KeyedVectors
 import openai
 
-def add_embeddings_to_existing_dataset(df1, df2):
-    """
-    Combines two DataFrames containing embeddings into a single DataFrame.
+# def add_embeddings_to_existing_dataset(df1, df2):
+#     """
+#     Combines two DataFrames containing embeddings into a single DataFrame.
 
-    Args:
-        df1 (pandas.DataFrame): The first DataFrame containing embeddings.
-        df2 (pandas.DataFrame): The second DataFrame containing embeddings.
+#     Args:
+#         df1 (pandas.DataFrame): The first DataFrame containing embeddings.
+#         df2 (pandas.DataFrame): The second DataFrame containing embeddings.
 
-    Returns:
-        pandas.DataFrame: A DataFrame containing the combined embeddings.
+#     Returns:
+#         pandas.DataFrame: A DataFrame containing the combined embeddings.
 
-    """
-    df_combined = pd.concat([df1, df2], axis=0)
-    df_combined = df_combined.drop_duplicates(subset='id', keep='first') # Remove duplicates
-    return df_combined
+#     """
+#     df_combined = pd.concat([df1, df2], axis=0)
+#     df_combined = df_combined.drop_duplicates(subset='id', keep='first') # Remove duplicates
+#     return df_combined
 
 def load_word2vec_model():
     """
