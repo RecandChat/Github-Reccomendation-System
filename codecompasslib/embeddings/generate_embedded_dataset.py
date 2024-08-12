@@ -90,13 +90,13 @@ def generate_openAI_embedded_csv(df, column_to_embed):
         
         # Save the current batch DataFrame to a CSV file
         # Mode 'a' is for append, header=False to avoid writing headers multiple times
-        batch_df.to_csv('df_embedded_0504_batch.csv', mode='a', header=not i, index=False)
+        batch_df.to_csv('df_embedded_1208_batch.csv', mode='a', header=not i, index=False)
         
         # Optional: Free up memory by deleting the batch DataFrame if no longer needed
         del batch_df
     
     # Load the CSV file with the embeddings
-    df_with_embeddings = pd.read_csv('df_embedded_0504_batch.csv')
+    df_with_embeddings = pd.read_csv('df_embedded_1208_batch.csv')
     return df_with_embeddings
     
 def main():

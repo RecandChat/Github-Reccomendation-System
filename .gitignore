@@ -6,7 +6,9 @@ secrets/
 **/__pycache__/
 codecompasslib/API/datasets/**.csv
 codecompasslib/API/**.txt
+codecompasslib/embeddings/**.csv
 dataset_new.csv
 codecompasslib/models/**.csv
 codecompasslib/models/examples/**.csv
 codecompasslib/PretrainedModels/
+**.csv

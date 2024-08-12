@@ -128,13 +128,13 @@ def load_data(full_data_folder_id: str, full_data_embedded_folder_id: str) -> Tu
     :return: The non-embedded and embedded datasets
     """
 
-    creds = get_creds_drive()
-    df_non_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_folder_id)
-    df_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_embedded_folder_id)
+    # creds = get_creds_drive()
+    # df_non_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_folder_id)
+    # df_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_embedded_folder_id)
 
     # Having data locally works much faster than retrieving from drive. Uncomment the following lines to use local data
-    # df_non_embedded = pd.read_csv('codecompasslib/models/data_full.csv')
-    # df_embedded = pd.read_csv('codecompasslib/models/df_embedded_combined.csv')
+    df_non_embedded = pd.read_csv('codecompasslib/models/data_full_new.csv')
+    df_embedded = pd.read_csv('codecompasslib/models/df_embedded_combined_new.csv')
 
     print("Data loaded")
     return df_non_embedded, df_embedded

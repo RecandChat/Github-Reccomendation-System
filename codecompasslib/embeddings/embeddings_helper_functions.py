@@ -1,3 +1,14 @@
+import sys
+import os
+
+# Construct the path to the root directory (one level up from embeddings)
+root_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(root_dir)
+real_project_dir = os.path.dirname(project_dir)
+
+# Add the project directory to the Python path
+sys.path.insert(0, real_project_dir)
+
 import numpy as np
 import pandas as pd
 from gensim.models.keyedvectors import KeyedVectors
@@ -35,7 +46,7 @@ def load_word2vec_model():
     Citation:
         Efstathiou Vasiliki, Chatzilenas Christos, & Spinellis Diomidis. (2018). Word Embeddings for the Software Engineering Domain [Data set]. Zenodo. https://doi.org/10.5281/zenodo.1199620
     """
-    word_vect = KeyedVectors.load_word2vec_format("./codecompasslib/PretrainedModels/SO_vectors_200.bin", binary=True)
+    word_vect = KeyedVectors.load_word2vec_format("codecompasslib/PretrainedModels/SO_vectors_200.bin", binary=True)
     return word_vect
 
 # Vectorizing text using domain specific word2vec model
