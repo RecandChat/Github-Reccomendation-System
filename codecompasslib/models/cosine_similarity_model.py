@@ -25,7 +25,7 @@ real_project_dir = os.path.dirname(project_dir)
 # Add the project directory to the Python path
 sys.path.insert(0, real_project_dir)
 
-from codecompasslib.API.drive_operations import download_csv_as_pd_dataframe, get_creds_drive
+from codecompasslib.API.drive_old.drive_operations import download_csv_as_pd_dataframe, get_creds_drive
 
 def load_data(full_data_folder_id: str) -> DataFrame:
     """

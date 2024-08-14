@@ -21,28 +21,8 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from category_encoders import ordinal
 
-from codecompasslib.API.drive_operations import download_csv_as_pd_dataframe, get_creds_drive
 from codecompasslib.API.get_bulk_data import get_stared_repos, get_user_repos
-from codecompasslib.embeddings.generate_embedded_dataset import redis_to_dataframe
-
-
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
-
-def load_non_embedded_data(fname: str) -> DataFrame:
-    """
-    Load non-embedded data from a local CSV file.
-    :param file_path: Path to the non-embedded CSV file.
-    :return: DataFrame containing non-embedded data.
-    """
-        # Construct the path to the root directory (one level up from embeddings)
-    root_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(root_dir)
-    real_project_dir = os.path.dirname(project_dir)
-    # Add the project directory to the Python path
-    sys.path.insert(0, real_project_dir)
-    
-    df_non_embedded = pd.read_csv(real_project_dir + '/data/' + fname)
-    return df_non_embedded
+from codecompasslib.API.redis_operations import redis_to_dataframe, load_non_embedded_data
 
 def encode_csv(df: DataFrame, encoder, label_col: str, typ: str = "fit") -> Tuple[DataFrame, ndarray]:
     """
@@ -181,19 +161,11 @@ def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFra
     """
     Generates recommendations using the LightGBM model.
     """
-    # Load both DataFrames from Redis and local CSV
-    df_embedded = redis_to_dataframe()
-    df_non_embedded = load_non_embedded_data('data_full.csv') 
 
     # Preprocess data
     label_col: str = 'target'
     df_merged, starred_or_owned_by_user = preprocess_data(df_embedded, df_non_embedded, label_col, target_user)
-    
-    #print columns of df_merged
-    print("\ndf_merged columns:", df_merged.columns)
-    #print head of df_merged
-    print("\ndf_merged head:", df_merged.head())
-    
+        
     df_training_ready: DataFrame = df_merged.drop(columns=['id', 'owner_user'])
     
     lgb_model: lgb.Booster
@@ -222,24 +194,6 @@ def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFra
             recommendations.append((df_merged.iloc[index]['id'], df_merged.iloc[index]['owner_user'], all_preds[index]))
 
     return recommendations
-
-if __name__ == "__main__":
-    #Want to check datatypes of columns for non embedded and embedded
-    non_embedded = load_non_embedded_data("data_full.csv")
-    embedded = redis_to_dataframe()
-    
-    print("\nNon-embedded dataset \n\nTypes: \n")
-    print(non_embedded.info())
-    print("\n\n Column names: \n")
-    print(non_embedded.columns)
-    
-    
-    print("\nEmbedded dataset \n\nTypes: \n")
-    print(embedded.info())
-    print("\n\n Column names: \n")
-    print(embedded.columns)
-    
-    recos = generate_lightGBM_recommendations("mercyog", non_embedded, embedded, 10)
     
     
 

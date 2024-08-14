@@ -8,18 +8,23 @@ real_project_dir = os.path.dirname(project_dir)
 
 # Add the project directory to the Python path
 sys.path.insert(0, real_project_dir)
-from codecompasslib.API.drive_operations import get_creds_drive, list_shared_drive_contents, download_csv_as_pd_dataframe, upload_df_to_drive_as_csv
 from codecompasslib.embeddings.embeddings_helper_functions import generate_openAI_embeddings
 from codecompasslib.models.secrets_manager import load_openai_key
+
 import openai
 import pandas as pd
 import redis
 import json
 import numpy as np
+from redis import Redis
 
+# Redis client constants
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_DB = 0
 
-# Initialize Redis client
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+#Initialize Redis client
+redis_client = Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
 
 # Generate embedded dataset using OpenAI embeddings
 def generate_openAI_embedded_to_redis(df, column_to_embed):
@@ -101,46 +106,6 @@ def generate_openAI_embedded_to_redis(df, column_to_embed):
             redis_client.set(redis_key, json.dumps(row[embeddings_columns].tolist()))  # Store as JSON string
 
     # return df_with_embeddings # MAYBE DROP THE RETURN? JUST TO LOAD THE DATA INTO REDIS (MAYBE MAKE FUNCTION TO SAVE TO REDIS FROM DF??)
-
-
-#ADD ARGUMENT HERE FOR EMBEDDED / NON EMBEDDED WHEN IMPLEMENTING REDIS FOR BOTH DATASETS
-def redis_to_dataframe() -> pd.DataFrame:
-    """
-    Retrieves embedded datasets from Redis and converts them into a DataFrame.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing 'id' and 'embedding' columns.
-    """
-    embedded_data = []
-
-    # Fetch all keys matching the pattern "embedded:*"
-    redis_keys = redis_client.keys('embedded:*')
-
-    for key in redis_keys:
-        # Decode the key from bytes to string
-        key_str = key.decode('utf-8')
-
-        # Get the corresponding embedding vector
-        embedded_vector = redis_client.get(key_str)
-        
-        if embedded_vector:
-            embedding_list = json.loads(embedded_vector.decode('utf-8'))  # Convert from JSON string to list
-            repository_id = key_str.split(":")[1]  # Extracting the repository ID from the key
-            embedded_data.append({'id': float(repository_id), 'embedding': embedding_list})
-
-    # Create a DataFrame from the collected embedded data
-    df_embed = pd.DataFrame(embedded_data)
-    df_embed['id'] = df_embed['id'].astype(float)
-    
-    embedding_array = np.vstack(df_embed['embedding'].values)
-    
-    df_embeddings = pd.DataFrame(embedding_array)
-    df_embeddings.columns = [f"embedding_{i}" for i in range(df_embeddings.shape[1])]
-    df_embeddings = df_embeddings.astype(float)
-
-    df_embedded = pd.concat([df_embed[['id']], df_embeddings], axis=1)
-
-    return df_embedded
 
 
 #If running main script it will start generating the embeddings from the local csv

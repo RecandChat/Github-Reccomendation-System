@@ -15,7 +15,7 @@ def save_to_csv(data: any, filename: str) -> None:
     :return: Does not return anything.
     """
     df: DataFrame = DataFrame(data)
-    df.to_csv(Path(PARENT_PATH + '/Data/' + filename), index=False)
+    df.to_csv(Path(PARENT_PATH + '/data/' + filename), index=False)
 
 
 def list_to_txt(data: list, file_name: str) -> bool:

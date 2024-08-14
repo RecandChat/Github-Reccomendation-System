@@ -7,7 +7,7 @@ sys.path.insert(0, project_root)
 
 import pytest
 from google.oauth2.credentials import Credentials
-from codecompasslib.API.drive_operations import get_creds_drive
+from codecompasslib.API.drive_old.drive_operations import get_creds_drive
 from pandas import DataFrame
 from unittest.mock import patch, Mock, mock_open
 import json

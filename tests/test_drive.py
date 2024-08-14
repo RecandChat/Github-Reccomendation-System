@@ -1,5 +1,5 @@
 import pytest
-from codecompasslib.API.drive_operations import (list_shared_drive_contents, download_csv_as_pd_dataframe,
+from codecompasslib.API.drive_old.drive_operations import (list_shared_drive_contents, download_csv_as_pd_dataframe,
                                                  upload_df_to_drive_as_csv)
 
 
