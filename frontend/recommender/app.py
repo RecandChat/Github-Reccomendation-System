@@ -12,23 +12,25 @@ real_project_dir = os.path.dirname(project_dir)
 sys.path.insert(0, real_project_dir)
 
 # Import necessary functions from codecompasslib
-from codecompasslib.models.lightgbm_model import generate_lightGBM_recommendations, load_data
+from codecompasslib.models.lightgbm_model import generate_lightGBM_recommendations,load_non_embedded_data
+from codecompasslib.API.redis_operations import redis_to_dataframe
 
 # Function to load cached data
 def load_cached_data():
     # Check if data is already stored in session state
     if 'cached_data' not in st.session_state:
         with st.spinner('Fetching data from the server...'):
-            # Load data
-            full_data_folder_id = '1Qiy9u03hUthqaoBDr4VQqhKwtLJ2O3Yd'
-            full_data_embedded_folder_id = '139wi78iRzhwGZwxmI5WALoYocR-Rk9By'
-            st.session_state.cached_data = load_data(full_data_folder_id, full_data_embedded_folder_id)
+            # Load data and cache it
+            df_non_embedded = load_non_embedded_data("data_full.csv")
+            df_embedded = redis_to_dataframe()
+            st.session_state.cached_data = (df_non_embedded, df_embedded)  # Cache as a tuple
     return st.session_state.cached_data
+
 
 def main():
     # Load the data
     df_non_embedded, df_embedded = load_cached_data()
-
+    
     # Set app title
     st.title('GitHub Repo Recommendation System')
 
@@ -38,7 +40,7 @@ def main():
     # Button to get recommendations
     if st.button('Get Recommendations'):
         # Check if user exists in the dataset
-        if target_user not in df_embedded['owner_user'].values:
+        if target_user not in df_non_embedded['owner_user'].values:
             st.error("User not found in the dataset. Please enter a valid username.")
         else:
             # Generate recommendations
