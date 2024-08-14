@@ -15,22 +15,27 @@ sys.path.insert(0, real_project_dir)
 from codecompasslib.models.lightgbm_model import generate_lightGBM_recommendations,load_non_embedded_data
 from codecompasslib.API.redis_operations import redis_to_dataframe
 
-# Function to load cached data
+@st.cache_data
+def load_non_embedded_data_cached(file_path):
+    return load_non_embedded_data(file_path)
+
+@st.cache_data
+def redis_to_dataframe_cached():
+    return redis_to_dataframe()
+
 def load_cached_data():
-    # Check if data is already stored in session state
     if 'cached_data' not in st.session_state:
         with st.spinner('Fetching data from the server...'):
-            # Load data and cache it
-            df_non_embedded = load_non_embedded_data("data_full.csv")
-            df_embedded = redis_to_dataframe()
-            st.session_state.cached_data = (df_non_embedded, df_embedded)  # Cache as a tuple
+            df_non_embedded = load_non_embedded_data_cached("data_full.csv")
+            print("\nNon embedded data loaded.")
+            df_embedded = redis_to_dataframe_cached()
+            print("\nEmbedded data from Redis loaded")
+            st.session_state.cached_data = (df_non_embedded, df_embedded)
     return st.session_state.cached_data
 
 
 def main():
-    # Load the data
     df_non_embedded, df_embedded = load_cached_data()
-    
     # Set app title
     st.title('GitHub Repo Recommendation System')
 
