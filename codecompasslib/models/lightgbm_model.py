@@ -19,7 +19,7 @@ from category_encoders import ordinal
 
 from codecompasslib.API.drive_operations import download_csv_as_pd_dataframe, get_creds_drive
 from codecompasslib.API.get_bulk_data import get_stared_repos, get_user_repos
-
+from codecompasslib.API.helper_functions import save_cache, load_cache
 
 def encode_csv(df: DataFrame, encoder, label_col: str, typ: str = "fit") -> Tuple[DataFrame, ndarray]:
     """
@@ -37,7 +37,6 @@ def encode_csv(df: DataFrame, encoder, label_col: str, typ: str = "fit") -> Tupl
     y: ndarray = df[label_col].values
     del df[label_col]
     return df, y
-
 
 def train_lightGBM_model(df_merged: DataFrame, label_col: str) -> Tuple[lgb.Booster, ordinal.OrdinalEncoder]:
     """
@@ -133,8 +132,8 @@ def load_data(full_data_folder_id: str, full_data_embedded_folder_id: str) -> Tu
     # df_embedded: DataFrame = download_csv_as_pd_dataframe(creds=creds, file_id=full_data_embedded_folder_id)
 
     # Having data locally works much faster than retrieving from drive. Uncomment the following lines to use local data
-    df_non_embedded = pd.read_csv('codecompasslib/models/data_full_new.csv')
-    df_embedded = pd.read_csv('codecompasslib/models/df_embedded_combined_new.csv')
+    df_non_embedded = pd.read_csv('codecompasslib/models/data_full.csv')
+    df_embedded = pd.read_csv('codecompasslib/models/df_embedded_combined.csv')
 
     print("Data loaded")
     return df_non_embedded, df_embedded
@@ -166,11 +165,12 @@ def preprocess_data(df_embedded: DataFrame, df_non_embedded: DataFrame,
     # Add target column: 1 if the repo is starred or owned by the user, else 0
     owned_by_target_repo_ids: List = [item['id'] for item in get_user_repos(target_user)[0]]
     starred_repo_ids: List = [item['id'] for item in get_stared_repos(target_user)[0]]
+    print("Owned length: ", len(owned_by_target_repo_ids))
+    print("Starred length: ", len(starred_repo_ids))
     starred_or_owned_by_user:List = starred_repo_ids + owned_by_target_repo_ids
     df_merged[label_col] = df_merged['id'].apply(lambda x: 1 if x in starred_or_owned_by_user else 0)
 
     return df_merged, starred_or_owned_by_user
-
 
 def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFrame,
                                       df_embedded: DataFrame, number_of_recommendations: int = 10) -> list:
@@ -217,5 +217,7 @@ def generate_lightGBM_recommendations(target_user: str, df_non_embedded: DataFra
         else:
             counter += 1
             recommendations.append((df_merged.iloc[index]['id'], df_merged.iloc[index]['owner_user'], all_preds[index]))
-
+    cached_recommendations = load_cache('codecompasslib/recommendations_cache.pkl')
+    cached_recommendations[target_user] = recommendations
+    save_cache(cached_recommendations, 'codecompasslib/recommendations_cache.pkl')
     return recommendations

@@ -13,6 +13,7 @@ sys.path.insert(0, real_project_dir)
 
 # Import necessary functions from codecompasslib
 from codecompasslib.models.lightgbm_model import generate_lightGBM_recommendations, load_data
+from codecompasslib.API.helper_functions import load_cache
 
 # Function to load cached data
 def load_cached_data():
@@ -24,6 +25,7 @@ def load_cached_data():
             full_data_embedded_folder_id = '139wi78iRzhwGZwxmI5WALoYocR-Rk9By'
             st.session_state.cached_data = load_data(full_data_folder_id, full_data_embedded_folder_id)
     return st.session_state.cached_data
+    
 
 def main():
     # Load the data
@@ -41,9 +43,13 @@ def main():
         if target_user not in df_embedded['owner_user'].values:
             st.error("User not found in the dataset. Please enter a valid username.")
         else:
-            # Generate recommendations
-            with st.spinner('Generating recommendations...'):
-                recommendations = generate_lightGBM_recommendations(target_user, df_non_embedded, df_embedded, number_of_recommendations=10)
+            cached_recommendations = load_cache('codecompasslib/recommendations_cache.pkl')
+            if target_user in cached_recommendations.keys():
+                recommendations = cached_recommendations[target_user]
+            else:
+                # Generate recommendations
+                with st.spinner('Generating recommendations...'):
+                    recommendations = generate_lightGBM_recommendations(target_user, df_non_embedded, df_embedded, number_of_recommendations=10)
             
             # Display recommendations
             st.subheader("Recommendations")

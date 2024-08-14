@@ -1,3 +1,5 @@
+import pickle
+import os
 from json import load
 from pandas import DataFrame
 from os.path import dirname
@@ -16,6 +18,33 @@ def save_to_csv(data: any, filename: str) -> None:
     """
     df: DataFrame = DataFrame(data)
     df.to_csv(Path(PARENT_PATH + '/Data/' + filename), index=False)
+
+def save_cache(cache_data: dict, cache_filename: str):
+    """
+    Save a dictionary to a file in pickle format.
+    
+    :param cache_data: The dictionary to be saved.
+    :param cache_filename: The name of the file where the cache will be saved.
+    """
+    with open(cache_filename, 'wb') as cache_file:
+        pickle.dump(cache_data, cache_file)
+    print(f"Cache saved to {cache_filename}")
+
+def load_cache(cache_filename: str) -> dict:
+    """
+    Load a dictionary from a pickle file.
+    
+    :param cache_filename: The name of the file where the cache is stored.
+    :return: The loaded dictionary.
+    """
+    if os.path.exists(cache_filename):
+        with open(cache_filename, 'rb') as cache_file:
+            cache_data = pickle.load(cache_file)
+        print(f"Cache loaded from {cache_filename}")
+        return cache_data
+    else:
+        print(f"No cache found at {cache_filename}")
+        return {}
 
 
 def list_to_txt(data: list, file_name: str) -> bool:
