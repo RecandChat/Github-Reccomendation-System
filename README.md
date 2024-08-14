@@ -55,11 +55,24 @@ pip install -r requirements.txt
 - `openAI_key`: Your OpenAI API key.
 ### **4.** Run:
   
-Chatbot
+**Chatbot**
 ```
 streamlit run frontend/chatbot/app.py
 ```
-Recommender:
+**Recommender:**
+```
+redis-server
+```
+Check server is running (Outputs pong if connected)
+```
+redis-cli ping
+```
+Check database by
+```
+redis-cli
+
+KEYS *
+```
 ```
 streamlit run frontend/recommender/app.py
 ```

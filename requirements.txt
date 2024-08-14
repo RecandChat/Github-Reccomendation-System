@@ -18,5 +18,6 @@ openai >= 1.14.3
 category-encoders==2.6.3
 sentence_transformers==2.6.0
 lightgbm==4.3.0
+redis
 
 
