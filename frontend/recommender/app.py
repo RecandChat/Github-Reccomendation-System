@@ -35,9 +35,8 @@ def load_cached_data():
 
 
 def main():
+    # Load the data
     df_non_embedded, df_embedded = load_cached_data()
-    # df_non_embedded = load_non_embedded_data("data_full.csv")
-    # df_embedded = redis_to_dataframe()
     # Set app title
     st.title('GitHub Repo Recommendation System')
 
