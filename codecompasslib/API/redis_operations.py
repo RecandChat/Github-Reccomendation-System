@@ -6,13 +6,6 @@ from redis import Redis
 from pandas import DataFrame, concat, read_csv
 from numpy import vstack
 
-root_dir = os.path.dirname(os.path.abspath(__file__))
-project_dir = os.path.dirname(root_dir)
-real_project_dir = os.path.dirname(project_dir)
-# Add the project directory to the Python path
-sys.path.insert(0, real_project_dir)
-datafolder = real_project_dir + '/data/'
-
 
 # Redis client constants
 REDIS_HOST = 'localhost'
@@ -66,6 +59,13 @@ def load_non_embedded_data(fname: str) -> DataFrame:
     :param file_path: Path to the non-embedded CSV file.
     :return: DataFrame containing non-embedded data.
     """
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    project_dir = os.path.dirname(root_dir)
+    real_project_dir = os.path.dirname(project_dir)
+    # Add the project directory to the Python path
+    sys.path.insert(0, real_project_dir)
+    datafolder = real_project_dir + '/data/'
     
     df_non_embedded = read_csv(datafolder + fname)
     return df_non_embedded
